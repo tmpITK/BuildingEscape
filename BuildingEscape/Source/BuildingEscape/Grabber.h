@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
+#include "Components/InputComponent.h"
 #include "Grabber.generated.h"
 
 
@@ -17,15 +18,25 @@ public:
 	// Sets default values for this component's properties
 	UGrabber();
 
-protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
 	float Reach=100.f;
 	UPhysicsHandleComponent* PhysicsHandle = nullptr;
+	UInputComponent* InputComponent = nullptr;
+
+	// Ray-cast and grab what's in reach on key press
+	void Grab();
+	// Called when grab is released
+	void Release();
+	// Find assumed attached physics component
+	void FindPhysicsHandleComponent();
+	//Setup assumed attached input component
+	void SetupInputComponent();
+	// Return hit for firs physics body in reach
+	const FHitResult GetFirstPhysicsBodyInReach();
 };

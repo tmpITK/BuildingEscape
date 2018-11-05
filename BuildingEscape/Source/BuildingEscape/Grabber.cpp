@@ -15,7 +15,6 @@ UGrabber::UGrabber()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	// ...
 }
 
 
@@ -23,9 +22,43 @@ UGrabber::UGrabber()
 void UGrabber::BeginPlay()
 {
 	Super::BeginPlay();
+	FindPhysicsHandleComponent();
+	SetupInputComponent();
+}
+
+
+void UGrabber::FindPhysicsHandleComponent(){
 	PhysicsHandle = GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
-	// ...
-	
+	if (PhysicsHandle) {
+		UE_LOG(LogTemp, Warning, TEXT("Found physics handler."))
+	}
+	else {
+		UE_LOG(LogTemp, Error, TEXT("%s missing physics handler."), *GetOwner()->GetName())
+	}
+}
+
+void UGrabber::SetupInputComponent(){
+	InputComponent = GetOwner()->FindComponentByClass<UInputComponent>();
+	if (InputComponent) {
+		UE_LOG(LogTemp, Warning, TEXT("Found input comp."))
+			InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
+		InputComponent->BindAction("Grab", IE_Released, this, &UGrabber::Release);
+	}
+	else {
+		UE_LOG(LogTemp, Error, TEXT("%s missing input component."), *GetOwner()->GetName())
+	}
+}
+
+
+
+void UGrabber::Grab() {
+	UE_LOG(LogTemp, Warning, TEXT("Pressed."))
+
+	GetFirstPhysicsBodyInReach();
+}
+
+void UGrabber::Release() {
+	UE_LOG(LogTemp, Warning, TEXT("Released."))
 }
 
 
@@ -33,6 +66,11 @@ void UGrabber::BeginPlay()
 void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+}
+
+const FHitResult UGrabber::GetFirstPhysicsBodyInReach()
+{
 	FVector PlayerViewPointLocation;
 	FRotator PlayerViewPointRotation;
 	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
@@ -40,8 +78,8 @@ void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 		OUT PlayerViewPointRotation
 	);
 
-	GEngine->AddOnScreenDebugMessage(-1, 0.001f, FColor::Red, 
-		FString::Printf(TEXT("Player is at %s \nwith rotation %s"), 
+	GEngine->AddOnScreenDebugMessage(-1, 0.001f, FColor::Red,
+		FString::Printf(TEXT("Player is at %s \nwith rotation %s"),
 			*PlayerViewPointLocation.ToString(),
 			*PlayerViewPointRotation.ToString()
 		));
@@ -57,10 +95,6 @@ void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 		0.f,
 		10.f
 	);
-	/*UE_LOG(LogTemp, Warning, TEXT("Player is at %s \nwith rotation %s"),
-		*PlayerViewPointLocation.ToString(),
-		*PlayerViewPointRotation.ToString()
-	);*/
 
 	FCollisionQueryParams TraceParameters(FName(TEXT("")), false, GetOwner());
 	FHitResult Hit;
@@ -74,6 +108,5 @@ void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 	if (Hit.bBlockingHit) {
 		UE_LOG(LogTemp, Warning, TEXT("Hit %s"), *(Hit.GetActor()->GetName()));
 	}
-	
+	return FHitResult();
 }
-
