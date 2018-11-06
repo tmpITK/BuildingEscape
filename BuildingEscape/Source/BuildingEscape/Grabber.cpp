@@ -27,22 +27,20 @@ void UGrabber::BeginPlay()
 	SetupInputComponent();
 }
 
-
+// look for attached physics handle
 void UGrabber::FindPhysicsHandleComponent(){
 	PhysicsHandle = GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
-	if (PhysicsHandle) {
-		UE_LOG(LogTemp, Warning, TEXT("Found physics handler."))
-	}
-	else {
+	if (PhysicsHandle == nullptr) {
 		UE_LOG(LogTemp, Error, TEXT("%s missing physics handler."), *GetOwner()->GetName())
 	}
 }
 
+//look for attached input component
 void UGrabber::SetupInputComponent(){
 	InputComponent = GetOwner()->FindComponentByClass<UInputComponent>();
 	if (InputComponent) {
-		UE_LOG(LogTemp, Warning, TEXT("Found input comp."))
-			InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
+
+		InputComponent->BindAction("Grab", IE_Pressed, this, &UGrabber::Grab);
 		InputComponent->BindAction("Grab", IE_Released, this, &UGrabber::Release);
 	}
 	else {
@@ -50,14 +48,15 @@ void UGrabber::SetupInputComponent(){
 	}
 }
 
-
-
 void UGrabber::Grab() {
 	UE_LOG(LogTemp, Warning, TEXT("Pressed."))
 
+	//get body hit
 	auto HitResult = GetFirstPhysicsBodyInReach();
 	auto ComponentToGrab = HitResult.GetComponent();
 	auto ActorHit = HitResult.GetActor();
+
+	//if we hit an actor with physics channel set attach physics handle
 	if (ActorHit) {
 		PhysicsHandle->GrabComponentAtLocationWithRotation(
 			ComponentToGrab,
@@ -79,20 +78,32 @@ void UGrabber::Release() {
 void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	FVector PlayerViewPointLocation;
-	FRotator PlayerViewPointRotation;
-	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
-		OUT PlayerViewPointLocation,
-		OUT PlayerViewPointRotation
-	);
 
-	FVector LineTraceEnd = PlayerViewPointLocation + PlayerViewPointRotation.Vector()*Reach;
 	if (PhysicsHandle->GrabbedComponent) {
-		PhysicsHandle->SetTargetLocation(LineTraceEnd);
+		PhysicsHandle->SetTargetLocation(GetReachLineEnd());
 	}
 }
 
 const FHitResult UGrabber::GetFirstPhysicsBodyInReach()
+{
+	// ray-cast to reach distance
+	FHitResult HitResult;
+	FCollisionQueryParams TraceParameters(FName(TEXT("")), false, GetOwner());
+
+	GetWorld()->LineTraceSingleByObjectType(
+		OUT HitResult,
+		GetReachLineStart(),
+		GetReachLineEnd(),
+		FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
+		TraceParameters
+	);
+	if (HitResult.bBlockingHit) {
+		UE_LOG(LogTemp, Warning, TEXT("Hit %s"), *(HitResult.GetActor()->GetName()));
+	}
+	return HitResult;
+}
+
+FVector UGrabber::GetReachLineStart()
 {
 	FVector PlayerViewPointLocation;
 	FRotator PlayerViewPointRotation;
@@ -101,35 +112,26 @@ const FHitResult UGrabber::GetFirstPhysicsBodyInReach()
 		OUT PlayerViewPointRotation
 	);
 
-	GEngine->AddOnScreenDebugMessage(-1, 0.001f, FColor::Red,
+	return PlayerViewPointLocation;
+}
+
+FVector UGrabber::GetReachLineEnd()
+{
+	FVector PlayerViewPointLocation;
+	FRotator PlayerViewPointRotation;
+	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
+		OUT PlayerViewPointLocation,
+		OUT PlayerViewPointRotation
+	);
+
+	return PlayerViewPointLocation + PlayerViewPointRotation.Vector()*Reach;
+}
+
+
+
+/*	GEngine->AddOnScreenDebugMessage(-1, 0.001f, FColor::Red,
 		FString::Printf(TEXT("Player is at %s \nwith rotation %s"),
 			*PlayerViewPointLocation.ToString(),
 			*PlayerViewPointRotation.ToString()
 		));
-
-	FVector LineTraceEnd = PlayerViewPointLocation + PlayerViewPointRotation.Vector()*Reach;
-	DrawDebugLine(
-		GetWorld(),
-		PlayerViewPointLocation,
-		LineTraceEnd,
-		FColor::Green,
-		false,
-		0.f,
-		0.f,
-		10.f
-	);
-
-	FCollisionQueryParams TraceParameters(FName(TEXT("")), false, GetOwner());
-	FHitResult Hit;
-	GetWorld()->LineTraceSingleByObjectType(
-		OUT Hit,
-		PlayerViewPointLocation,
-		LineTraceEnd,
-		FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
-		TraceParameters
-	);
-	if (Hit.bBlockingHit) {
-		UE_LOG(LogTemp, Warning, TEXT("Hit %s"), *(Hit.GetActor()->GetName()));
-	}
-	return Hit;
-}
+*/
