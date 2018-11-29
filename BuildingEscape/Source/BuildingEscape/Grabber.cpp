@@ -50,6 +50,7 @@ void UGrabber::SetupInputComponent(){
 
 void UGrabber::Grab() {
 	UE_LOG(LogTemp, Warning, TEXT("Pressed."))
+	if (!PhysicsHandle) { return; }
 
 	//get body hit
 	auto HitResult = GetFirstPhysicsBodyInReach();
@@ -69,6 +70,7 @@ void UGrabber::Grab() {
 }
 
 void UGrabber::Release() {
+	if (!PhysicsHandle) { return; }
 	UE_LOG(LogTemp, Warning, TEXT("Released."))
 		PhysicsHandle->ReleaseComponent();
 }
@@ -78,6 +80,8 @@ void UGrabber::Release() {
 void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (!PhysicsHandle) { return; }
 
 	if (PhysicsHandle->GrabbedComponent) {
 		PhysicsHandle->SetTargetLocation(GetReachLineEnd());
