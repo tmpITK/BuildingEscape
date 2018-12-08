@@ -30,15 +30,6 @@ void UOpenDoor::BeginPlay()
 	}
 }
 
-void UOpenDoor::OpenDoor()
-{
-	OnOpenRequest.Broadcast();
-}
-
-void UOpenDoor::CloseDoor() {
-	if (!Owner) { return; }
-	Owner->SetActorRotation(FRotator(0.f, CloseAngle, 0.f));
-}
 
 
 // Called every frame
@@ -48,12 +39,10 @@ void UOpenDoor::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompon
 
 	// Poll trigger volume
 	if (GetTotalMassOfActorsOnPlate() > MassNeededToOpenDoor) {
-		OpenDoor();
-		LastDoorOpenTime = GetWorld()->GetTimeSeconds();
+		OnOpen.Broadcast();
 	}
-	if (GetWorld()->GetTimeSeconds() - LastDoorOpenTime >= DoorCloseDelay) {
-		CloseDoor();
-		LastDoorOpenTime = 0;
+	else {
+		OnClose.Broadcast();
 	}
 }
 
